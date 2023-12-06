@@ -6,8 +6,8 @@ with open('a_input.txt') as f:
 
 lines = input_txt.splitlines()
 
-times = [int(e) for e in lines[0].split()[1:]]
-dists = [int(e) for e in lines[1].split()[1:]]
+times = [int("".join([e for e in lines[0].split()[1:]]))]
+dists = [int("".join([e for e in lines[1].split()[1:]]))]
 
 score = 1
 for t, d in zip(times, dists):
