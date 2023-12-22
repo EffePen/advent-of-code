@@ -147,6 +147,7 @@ if debug:
     assert tuple(evolved_bricks) == tuple(evolved_again_bricks)
 
 ok_remove = []
+fallen_count = []
 for idx in range(len(evolved_bricks)):
     # if not sustaining, add 1
     if idx not in brick_sustaining:
@@ -154,8 +155,25 @@ for idx in range(len(evolved_bricks)):
     # if sustaining but all sustained bricks have more than 1 sustain, add 1
     elif all(len(set(brick_sustained_by[s_idx])) > 1 for s_idx in brick_sustaining[idx]):
         ok_remove.append(idx)
+    else:
+        # not ok to remove. calculate how many would fall
+        tmp_fallen = {idx}
+        sustained_bricks = brick_sustaining[idx]
+        while sustained_bricks:
+            next_sustained_bricks = set()
+            for s_idx in sustained_bricks:
+                # if no more bricks would sustain it, add it to fallen and add the ones sustained by it for a check
+                if not set(brick_sustained_by[s_idx]) - tmp_fallen:
+                    tmp_fallen.add(s_idx)
+                    next_sustained_bricks.update(brick_sustaining.get(s_idx, []))
+            sustained_bricks = next_sustained_bricks
+
+        # exclude the single one from the fallen and count
+        if len(tmp_fallen) - 1 != 0:
+            fallen_count.append(len(tmp_fallen) - 1)
 
 print(len(ok_remove))
+print(sum(fallen_count))
 
 if __name__ == "__main__":
     pass
