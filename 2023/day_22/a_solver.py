@@ -72,15 +72,15 @@ bottmup_bricks = sorted(bricks, key=lambda x: (min(x[1][0][2], x[1][1][2]), max(
 brick_sustaining = {}
 brick_sustained_by = {}
 evolved_bricks = []
-delta_z = sys.maxsize
 for c_idx, curr_brick in bottmup_bricks:
     (x1, y1, z1), (x2, y2, z2) = curr_brick
     curr_min_z = min(z1, z2)
     evolved_bricks_below = [b for b in evolved_bricks if curr_min_z > max(b[1][0][2], b[1][1][2])]
+
     # find max possible z after drop
     ev_brick_max_z = 0
     tmp_sustaining = []
-    for ev_idx, ev_brick in evolved_bricks:
+    for ev_idx, ev_brick in evolved_bricks_below:
         if bricks_h_intersect(ev_brick, curr_brick):
             tmp_ev_brick_max_z = max(ev_brick[0][2], ev_brick[1][2])
             ev_brick_max_z = max(tmp_ev_brick_max_z, ev_brick_max_z)
@@ -101,9 +101,50 @@ for c_idx, curr_brick in bottmup_bricks:
 
     # evolve brick
     max_z = ev_brick_max_z + 1
-    curr_ev_brick = ((x1, y1, max_z), (x2, y2, max_z))
+    delta_z = curr_min_z - max_z
+    curr_ev_brick = ((x1, y1, z1-delta_z), (x2, y2, z2-delta_z))
     evolved_bricks.append((c_idx, curr_ev_brick))
 
+debug = False
+
+if debug:
+    brick_sustaining = {}
+    brick_sustained_by = {}
+    evolved_again_bricks = []
+    for c_idx, curr_brick in evolved_bricks:
+        (x1, y1, z1), (x2, y2, z2) = curr_brick
+        curr_min_z = min(z1, z2)
+        evolved_bricks_below = [b for b in evolved_bricks if curr_min_z > max(b[1][0][2], b[1][1][2])]
+
+        # find max possible z after drop
+        ev_brick_max_z = 0
+        tmp_sustaining = []
+        for ev_idx, ev_brick in evolved_bricks_below:
+            if bricks_h_intersect(ev_brick, curr_brick):
+                tmp_ev_brick_max_z = max(ev_brick[0][2], ev_brick[1][2])
+                ev_brick_max_z = max(tmp_ev_brick_max_z, ev_brick_max_z)
+                tmp_sustaining.append((tmp_ev_brick_max_z, ev_idx))
+
+        # for all the candidates sustaining, get only the highest ones
+        for tmp_ev_brick_max_z, ev_idx in tmp_sustaining:
+            if tmp_ev_brick_max_z == ev_brick_max_z:
+                # update sustained bricks
+                if c_idx not in brick_sustained_by:
+                    brick_sustained_by[c_idx] = []
+                brick_sustained_by[c_idx].append(ev_idx)
+
+                # update sustaining bricks
+                if ev_idx not in brick_sustaining:
+                    brick_sustaining[ev_idx] = []
+                brick_sustaining[ev_idx].append(c_idx)
+
+        # evolve brick
+        max_z = ev_brick_max_z + 1
+        delta_z = max_z - curr_min_z
+        curr_ev_brick = ((x1, y1, z1-delta_z), (x2, y2, z2-delta_z))
+        evolved_again_bricks.append((c_idx, curr_ev_brick))
+
+    assert tuple(evolved_bricks) == tuple(evolved_again_bricks)
 
 ok_remove = []
 for idx in range(len(evolved_bricks)):
@@ -111,7 +152,7 @@ for idx in range(len(evolved_bricks)):
     if idx not in brick_sustaining:
         ok_remove.append(idx)
     # if sustaining but all sustained bricks have more than 1 sustain, add 1
-    elif all(len(brick_sustained_by[s_idx]) > 1 for s_idx in brick_sustaining[idx]):
+    elif all(len(set(brick_sustained_by[s_idx])) > 1 for s_idx in brick_sustaining[idx]):
         ok_remove.append(idx)
 
 print(len(ok_remove))
