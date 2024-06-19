@@ -7,9 +7,9 @@ import itertools
 def parse_input():
     with open("input.txt") as f:
         particles_str = f.read().splitlines()
-    particles = []
+    particles = dict()
     for p_idx, p_str in enumerate(particles_str):
-        particles.append({})
+        particles[p_idx] = {}
         for m_str in p_str.split(", "):
             m, m_vals_str = m_str.split("=")
             particles[p_idx][m] = [int(e) for e in m_vals_str.strip("<>").split(",")]
@@ -30,17 +30,24 @@ def find_closest_to_zero(particles):
     # the closest will be the ones with lowest total acceleration
     # then the ones with lowest initial velocity
     # then the ones with lowest initial position
-    particles = sorted([(p_idx, z_index(p)) for p_idx, p in enumerate(particles)], key=lambda x: x[1])
+    particles = sorted([(p_idx, z_index(p)) for p_idx, p in particles.items()], key=lambda x: x[1])
     return particles
 
 
+# NOTE: this cannot work, since p(t) = p0 + v0*t + 0.5*a*t**2
+# does not hold in this discrete setting
+# The right equation is the following
+#        v(t) = v0 + a0*t
+#        p(t) = p0 + sum{t=1->t+1}(v0 + a0*t) =
+#             = p0 + v0*t + (t+1)*t/2 * a0
+#             = p0 + (v0 + a0/2)*t + 1/2*a0*t**2
 def find_collision_times(p1, p2):
     dims_collision_times = []
 
     # for each dimension, calculate the solutions for t
     for dim in range(3):
-        a = (p2["a"][dim] - p1["a"][dim])
-        b = (p2["v"][dim] - p1["v"][dim])
+        a = ( 0.5 * p2["a"][dim] - 0.5 * p1["a"][dim])
+        b = ((0.5 * p2["a"][dim] + p2["v"][dim]) - (0.5 * p1["a"][dim] + p1["v"][dim]))
         c = (p2["p"][dim] - p1["p"][dim])
         if a != 0:
             if b != 0:
@@ -74,11 +81,14 @@ def find_collision_times(p1, p2):
     return collision_times
 
 
-def solution_pt2(particles):
+def solution_pt2_analytical(particles):
     # find all possible collisions between pairs of particles
     potential_collided = []
-    for p1_idx, p1 in enumerate(particles):
-        for p2_idx, p2 in enumerate(particles[p1_idx+1:], p1_idx+1):
+    particle_ids = list(particles.keys())
+    for idx1, p1_idx in enumerate(particle_ids):
+        for p2_idx in particle_ids[idx1+1:]:
+            p1 = particles[p1_idx]
+            p2 = particles[p2_idx]
             collision_times = find_collision_times(p1, p2)
             for t in collision_times:
                 potential_collided.extend([(t, p1_idx, p2_idx)])
@@ -97,6 +107,30 @@ def solution_pt2(particles):
     return already_collided
 
 
+def simulate_timestep(particles):
+    for idx in particles.keys():
+        particles[idx]["v"] = [vi + ai for vi, ai in zip(particles[idx]["v"], particles[idx]["a"])]
+        particles[idx]["p"] = [pi + vi for pi, vi in zip(particles[idx]["p"], particles[idx]["v"])]
+    return particles
+
+
+def remove_collided(particles):
+    particles_idxs = sorted([(p["p"], p_idx) for p_idx, p in particles.items()], key=lambda x: x[0])
+    for p, p_group in itertools.groupby(particles_idxs, key=lambda x: x[0]):
+        p_group = list(p_group)
+        if len(p_group) > 1:
+            for (_, p_idx) in p_group:
+                particles.pop(p_idx)
+    return particles
+
+
+def solution_pt2_simulated(particles):
+    for _ in range(5000):
+        particles = remove_collided(particles)
+        particles = simulate_timestep(particles)
+    return particles
+
+
 particles = parse_input()
 
 
@@ -106,8 +140,10 @@ print("Part 1 solution: ", particles_index[0][0])
 
 
 # ######## PART 2
-already_collided = solution_pt2(particles)
-print("Part 1 solution: ", len(particles) - len(already_collided))
+collided = solution_pt2_analytical(particles)
+print("Part 2 solution: ", len(particles) - len(collided))
+# particles = solution_pt2_simulated(particles)
+# print("Part 2 solution: ", len(particles))
 
 
 if __name__ == "__main__":
