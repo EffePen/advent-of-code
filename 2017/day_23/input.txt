@@ -8,25 +8,25 @@ set c b
 sub c -17000
 set f 1
 set d 2
-set e 2
-set g d
-mul g e
-sub g b
-jnz g 2
-set f 0
-sub e -1
-set g e
-sub g b
-jnz g -8
-sub d -1
-set g d
-sub g b
-jnz g -13
-jnz f 2
-sub h -1
-set g b
-sub g c
-jnz g 2
-jnz 1 3
-sub b -17
-jnz 1 -23
+set e 2   # resetta e = 2
+set g d   #
+mul g e   #
+sub g b   #
+jnz g 2   #
+set f 0   # ultime 5 istruzioni corrispondono a (se d*e == b => f = 0)
+sub e -1  # e += 1
+set g e   #
+sub g b   #
+jnz g -8  # ultime 3 corrispondono a (se e == b procedi, altrimenti torna a riga 12
+sub d -1  # d += 1
+set g d   #
+sub g b   #
+jnz g -13 # ultime 3 corrispondono a (se d == b procedi, altrimenti torna a riga 11 => (resetta e = 2)
+jnz f 2   #
+sub h -1  # ultime 2 corrispondono a (se f == 0 h += 1)
+set g b   #
+sub g c   #
+jnz g 2   #
+jnz 1 3   #
+sub b -17 #
+jnz 1 -23 # ultime 6 corrispondono a (se b == c termina, altrimenti b += 17 e torna a riga 9 => resetta tutto a parte b e c
