@@ -124,7 +124,7 @@ print("Part 1 solution: ", instr_count["mul"])
 
 # ######## PART 2
 score = execute_p2_optimized()
-print("Part 1 solution: ", score)
+print("Part 2 solution: ", score)
 
 
 
