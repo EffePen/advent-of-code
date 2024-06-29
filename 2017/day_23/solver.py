@@ -97,7 +97,6 @@ def execute_p2_optimized():
     outer_loop_steps = (c - b) // 17 + 1
     h = 0
     for b_idx in range(outer_loop_steps):
-        b += 17
         # the following code translates to "if b is not prime => f = 0"
         # => "if b is not prime => h += 1"
         # f = 1
@@ -109,6 +108,7 @@ def execute_p2_optimized():
         #     h += 1
         if not is_prime(b):
             h += 1
+        b += 17
 
     return h
 
