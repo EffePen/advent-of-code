@@ -1,5 +1,8 @@
 
 
+from collections import defaultdict
+
+
 def parse_input():
     with open("input.txt") as f:
         input_txt = f.read()
@@ -80,8 +83,70 @@ def solve_pt1(partitions):
     return score
 
 
+def group_empty_blocks(empty_blocks):
+    empty_blocks = sorted(empty_blocks, key=lambda x: x[0])
+
+    # pop the first block
+    new_empty_blocks = [empty_blocks[0]]
+    del empty_blocks[0]
+
+    while empty_blocks:
+        # check if the new block follows the prev one
+        if new_empty_blocks[-1][0] + new_empty_blocks[-1][1] == empty_blocks[0][0]:
+            new_empty_blocks[-1] = (new_empty_blocks[-1][0], new_empty_blocks[-1][1] + empty_blocks[0][1], None)
+        else:
+            new_empty_blocks.append(empty_blocks[0])
+        del empty_blocks[0]
+
+    return new_empty_blocks
+
+
 def solve_pt2(partitions):
+
+    empty_blocks = [p for p in partitions if p[2] is None]
+    nonempty_blocks = [p for p in partitions if p[2] is not None]
+
+    # count sizes
+    empty_sizes_count = defaultdict(int)
+    for (e_position, e_size, _) in empty_blocks:
+        empty_sizes_count[e_size] += 1
+
+    # try to move each block
+    file_blocks = []
+    for ne_position, ne_size, ne_file_id in sorted(nonempty_blocks, key=lambda x: x[2], reverse=True):
+        for eb_idx, (e_position, e_size, _) in enumerate(empty_blocks):
+            if ne_size > e_size or ne_position < e_position:
+                continue
+            else:
+                # move the file block inside the empty block
+                file_blocks.append((e_position, ne_size, ne_file_id))
+
+                # add an empty block instead of the file block
+                empty_blocks.append((ne_position, ne_size, None))
+
+                # if the empty block has been filled, just delete it. otherwise, modify it
+                if ne_size == e_size:
+                    del empty_blocks[eb_idx]
+                else:
+                    empty_blocks[eb_idx] = (e_position + ne_size, e_size - ne_size, None)
+
+                # group empty blocks
+                # TODO: optimize empty blocks grouping, or reduce cases where it is really needed
+                empty_blocks = group_empty_blocks(empty_blocks)
+
+                # stop iterating over empty blocks
+                break
+        else:
+            # if no empty block has been found that can contain this file, just keep it where it is
+            file_blocks.append((ne_position, ne_size, ne_file_id))
+
+    # calculate score
+    file_blocks = sorted(file_blocks, key=lambda x: x[0])
     score = 0
+    for ne_position, ne_size, ne_file_id in file_blocks:
+        for idx in range(ne_position, ne_position + ne_size):
+            score += idx * ne_file_id
+
     return score
 
 
