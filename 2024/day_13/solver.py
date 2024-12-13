@@ -12,12 +12,35 @@ def parse_input():
     return machine_configs
 
 
-def solve(machine_configs, delta=0):
+def solve(machine_configs, part):
     cost = 0
+    delta = 0 if part == 1 else 10000000000000
     for ax, ay, bx, by, px, py in machine_configs:
         # solve linear equations via matrix inversion and multiplication
-        sol = np.matmul(np.linalg.inv(np.array([[ax, bx], [ay, by]], dtype=np.int64)), np.array([px + delta, py + delta], dtype=np.int64))
-        if all([round(e, 3).is_integer() for e in sol]): # only integer solutions (round due to float operations errors)
+        M = np.array([[ax, bx], [ay, by]], dtype=np.int64)
+
+        # intersecting lines: get the unique integer solution
+        if np.linalg.det(M) != 0:
+            sol = np.matmul(np.linalg.inv(M), np.array([px + delta, py + delta], dtype=np.int64))
+            if not all(round(e, 3).is_integer() for e in sol):
+                continue
+        # overlapping lines: get the lowest cost solution, if any
+        elif ax / ay == bx / by == px / py:
+            na, nb = px / ax, px / bx
+            if round(na, 3).is_integer() and round(nb, 3).is_integer():
+                sol = [na, 0.] if na * 3 < nb else [0., nb]
+            elif round(na, 3).is_integer():
+                sol = [na, 0.]
+            elif round(nb, 3).is_integer():
+                sol = [0., nb]
+            else:
+                continue
+        # parallel lines: skip
+        else:
+            continue
+
+        # check additional problem conditions
+        if all((part == 2 or e < 100) for e in sol):
             cost += sol[0] * 3 + sol[1] * 1
     return cost
 
@@ -26,11 +49,11 @@ def solve(machine_configs, delta=0):
 machine_configs = parse_input()
 
 # PART 1
-score = solve(machine_configs, delta=0)
+score = solve(machine_configs, part=1)
 print(f"Part 1 solution: {score}")
 
 # PART 2
-score = solve(machine_configs, delta=10000000000000)
+score = solve(machine_configs, part=2)
 print(f"Part 2 solution: {score}")
 
 
