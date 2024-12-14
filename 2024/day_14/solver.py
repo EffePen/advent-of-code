@@ -2,6 +2,7 @@
 import re
 import math
 import operator
+import numpy as np
 from functools import reduce
 from collections import Counter
 import matplotlib.pyplot as plt
@@ -43,11 +44,17 @@ def solve_pt1(robots, grid_shape, num_seconds):
 
 
 def solve_pt2(robots, grid_shape):
-    idx = 0
-
-    while True:
+    solutions = []
+    for idx in range(1, 10000):
         robots = [(complex_mod(p + v, (grid_shape[0] + grid_shape[1] * 1j)), v) for p, v in robots]
-        idx += 1
+        solutions.append((idx, np.var(np.array([[p.real, p.imag] for p, _ in robots]))))
+    score, _ = min(solutions, key=lambda x: x[1])
+    return score
+
+
+def solve_pt2_visual(robots, grid_shape):
+    for idx in range(1, 10000):
+        robots = [(complex_mod(p + v, (grid_shape[0] + grid_shape[1] * 1j)), v) for p, v in robots]
         ps = set([p for p, v in robots])
         xs_counter = Counter([p.real for p in ps])
         ys_counter = Counter([p.imag for p in ps])
@@ -69,8 +76,7 @@ print(f"Part 1 solution: {score}")
 
 
 # PART 2
-# NOTE: to solve this, you need to manually inspect
-solve_pt2(robots, grid_shape=(101, 103))
+score = solve_pt2(robots, grid_shape=(101, 103))
 print(f"Part 2 solution: {score}")
 
 
