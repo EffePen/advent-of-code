@@ -2,7 +2,7 @@
 
 import re
 from functools import cache
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 
 def parse_input():
@@ -46,7 +46,7 @@ def solve_pt1(codes, base_transform):
         new_codes = [base_transform["numpad"][prev_c + curr_c] for prev_c, curr_c in zip("A" + code[:-1], code)]
 
         # iterate over robot dirpads
-        for idx in range(2):
+        for idx in range(14):
             code = "".join(new_codes)
             new_codes = [base_transform["dirpad"][prev_c + curr_c] for prev_c, curr_c in zip("A" + code[:-1], code)]
             code = "".join(new_codes)
@@ -57,8 +57,26 @@ def solve_pt1(codes, base_transform):
     return score
 
 
-def solve_pt2(codes, pad):
+def solve_pt2(codes, base_transform):
     score = 0
+    for code in codes:
+        numeric_part = int("".join(re.findall(r"\d", code)))
+        # from numpad to dirpad
+        new_codes = [base_transform["numpad"][prev_c + curr_c] for prev_c, curr_c in zip("A" + code[:-1], code)]
+
+        # iterate over robot dirpads
+        codes_counter = Counter(new_codes)
+        for idx in range(25):
+            new_codes_counter = defaultdict(int)
+            for new_code, cnt in codes_counter.items():
+                tmp_new_codes = [base_transform["dirpad"][prev_c + curr_c] for prev_c, curr_c in zip("A" + new_code[:-1], new_code)]
+                for tmp_new_code in tmp_new_codes:
+                    new_codes_counter[tmp_new_code] += cnt
+            codes_counter = new_codes_counter
+
+        code_len = sum(len(code) * cnt for code, cnt in codes_counter.items())
+        score += code_len * numeric_part
+
     return score
 
 
