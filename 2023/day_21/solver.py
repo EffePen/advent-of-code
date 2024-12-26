@@ -1,5 +1,5 @@
 
-import re
+import math
 
 
 def parse_input():
@@ -48,12 +48,62 @@ def solve_p1(grid_map, num_steps):
     return len(seen_coords[parity])
 
 
+def solve_p2(grid, num_steps):
+    score = 0
+    start, = [pos for pos in grid if grid[pos] == "S"]
+
+    # create a 3x3 grid
+    grid_w = int(max([p.real for p in grid])) + 1
+    grid_h = int(max([p.imag for p in grid])) + 1
+    grid_3x3 = dict()
+    for rx_idx in (-1, 0, 1, -2, +2):
+        for ry_idx in (-1, 0, 1, -2, +2):
+            replica_grid = {p + (rx_idx * grid_w) + (ry_idx * grid_h)*1j: e for p, e in grid.items()}
+            grid_3x3.update(replica_grid)
+
+    # run djikstra on 3x3 replica grid
+    current_positions = {start}
+    visited = {start: 0}
+    while current_positions:
+        curr_pos = current_positions.pop()
+        dist = visited[curr_pos]
+        next_positions = {curr_pos + d for d in [1, -1, 1j, -1j]
+                          if grid_3x3.get(curr_pos + d, "#") != "#"
+                          and visited.get(curr_pos + d, math.inf) > dist + 1}
+        visited.update({p: dist+1 for p in next_positions})
+        current_positions.update(next_positions)
+
+    # for each neighboring replica, get the first touched tile
+    replica_info = {}
+    for rx_idx in (-1, 0, 1, -2, +2):
+        for ry_idx in (-1, 0, 1, -2, +2):
+            replica_grid = {p + (rx_idx * grid_w) + (ry_idx * grid_h)*1j: e for p, e in grid.items()}
+            min_p, min_dist = min([(p, visited[p]) for p in replica_grid if p in visited], key=lambda x: x[1])
+            _, max_dist = max([(p, visited[p]) for p in replica_grid if p in visited], key=lambda x: x[1])
+            num_even = len([(p, visited[p]) for p in replica_grid if visited.get(p, math.inf) % 2 == 0])
+            num_odd = len([(p, visited[p]) for p in replica_grid if visited.get(p, math.inf) % 2 == 1])
+            replica_info[(rx_idx, ry_idx)] = (min_p - rx_idx * grid_w - ry_idx * grid_h * 1j, min_dist, max_dist - min_dist, num_even, num_odd)
+
+    a = 1
+
+    return score
+
+
+
+
+
+
+
 # PARSE INPUT
 grid, grid_map = parse_input()
 
 # PART 1
 score = solve_p1(grid_map, num_steps=64)
 print("Part 1 solution:", score)
+
+# PART 2
+score = solve_p2(grid_map, num_steps=64)
+print("Part 2 solution:", score)
 
 
 if __name__ == "__main__":
