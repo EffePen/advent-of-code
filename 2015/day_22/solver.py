@@ -1,6 +1,6 @@
 
 
-import math
+from copy import deepcopy
 
 
 def parse_input():
@@ -24,89 +24,84 @@ def parse_input():
     return my_hp, my_mana, enemy_hp, enemy_damage, spells_dict
 
 
-MAX_MANA_SPENT = math.inf
+def apply_spell(status, spell):
+    status = deepcopy(status)
+    status["my_mana"] -= SPELLS_DICT[spell]["cost"]
+    status["mana_spent"] += SPELLS_DICT[spell]["cost"]
 
-
-def evolve(spells, my_hp, my_mana, enemy_hp, enemy_damage, effects, mana_spent):
-    global MAX_MANA_SPENT
-    if mana_spent > MAX_MANA_SPENT:
-        return math.inf
-
-    spell = spells[-1]
     # cast spell
     if spell == "Magic Missile":
-        enemy_hp -= 4
+        status["enemy_hp"] -= 4
     elif spell == "Drain":
-        enemy_hp -= 2
-        my_hp += 2
+        status["enemy_hp"] -= 2
+        status["my_hp"] += 2
     elif spell == "Shield":
-        effects.append((spell, 6))
+        status["effects"] += ((spell, 6),)
     elif spell == "Poison":
-        effects.append((spell, 6))
+        status["effects"] += ((spell, 6),)
     elif spell == "Recharge":
-        effects.append((spell, 5))
+        status["effects"] += ((spell, 5),)
     else:
         raise ValueError
 
     # boss turn
     # apply effects
     my_armor = 0
-    for effect, turns in effects:
+    for effect, turns in status["effects"]:
         if effect == "Shield":
             my_armor += 7
         elif effect == "Poison":
-            enemy_hp -= 3
+            status["enemy_hp"] -= 3
         elif effect == "Recharge":
-            my_mana += 101
-    effects = [(e, et-1) for e, et in effects if et > 1]
+            status["my_mana"] += 101
+    status["effects"] = tuple((e, et-1) for e, et in status["effects"] if et > 1)
 
-    if enemy_hp <= 0:
-        MAX_MANA_SPENT = mana_spent
-        return mana_spent
-    else:
-        my_hp -= max(1, enemy_damage - my_armor)
-        if my_hp <= 0:
-            return math.inf
+    if status["enemy_hp"] <= 0:
+        return status
 
-    # my turn
+    status["my_hp"] -= max(1, enemy_damage - my_armor)
+    if status["my_hp"] <= 0:
+        return status
+
+    # beginning of my turn
+    # apply effects
     my_armor = 0
-    for effect, turns in effects:
+    for effect, turns in status["effects"]:
         if effect == "Shield":
             my_armor += 7
         elif effect == "Poison":
-            enemy_hp -= 3
+            status["enemy_hp"] -= 3
         elif effect == "Recharge":
-            my_mana += 101
-    effects = [(e, et - 1) for e, et in effects if et > 1]
+            status["my_mana"] += 101
+    status["effects"] = tuple((e, et-1) for e, et in status["effects"] if et > 1)
 
-    if enemy_hp <= 0:
-        return mana_spent
-
-    # try available spells
-    available_spells = sorted([sk for sk, sd in SPELLS_DICT.items() if sd["cost"] <= my_mana], key=lambda x: SPELLS_DICT[x]["cost"])
-    if not available_spells:
-        return math.inf
-    else:
-        return min(evolve(spells=spells + [new_spell],
-                          my_hp=my_hp,
-                          my_mana=my_mana - SPELLS_DICT[new_spell]["cost"],
-                          enemy_hp=enemy_hp,
-                          enemy_damage=enemy_damage,
-                          effects=effects,
-                          mana_spent=mana_spent + SPELLS_DICT[new_spell]["cost"])
-                   for new_spell in available_spells)
+    return status
 
 
 def solve_pt1(my_hp, my_mana, enemy_hp, enemy_damage):
-    available_spells = sorted([sk for sk, sd in SPELLS_DICT.items() if sd["cost"] <= my_mana], key=lambda x: SPELLS_DICT[x]["cost"])
-    return min(evolve(spells=[new_spell],
-                      my_hp=my_hp,
-                      my_mana=my_mana - SPELLS_DICT[new_spell]["cost"],
-                      enemy_hp=enemy_hp,
-                      enemy_damage=enemy_damage,
-                      effects=[],
-                      mana_spent=SPELLS_DICT[new_spell]["cost"])
-               for new_spell in available_spells)
+    initial_status = {
+        "my_hp": my_hp,
+        "my_mana": my_mana,
+        "enemy_hp": enemy_hp,
+        "enemy_damage": enemy_damage,
+        "effects": (),
+        "mana_spent": 0,
+    }
+    statuses = [initial_status]
+    seen_statuses = set()
+
+    while True:
+        statuses = sorted(statuses, key=lambda x: x["mana_spent"])
+        status = statuses.pop(0)
+
+        available_spells = sorted([sk for sk, sd in SPELLS_DICT.items() if sd["cost"] <= status["my_mana"]],
+                                  key=lambda x: SPELLS_DICT[x].get("cost", 0))
+        for new_spell in available_spells:
+            new_status = apply_spell(status, new_spell)
+            if new_status["enemy_hp"] <= 0:
+                return new_status["mana_spent"]
+            elif new_status["my_hp"] > 0 and tuple(sorted(new_status.items())) not in seen_statuses:
+                statuses.append(new_status)
 
 
 # input
