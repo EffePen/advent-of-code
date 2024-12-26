@@ -1,6 +1,6 @@
 
 
-from copy import deepcopy
+import heapq
 
 
 def parse_input():
@@ -25,7 +25,6 @@ def parse_input():
 
 
 def apply_spell(status, spell):
-    status = deepcopy(status)
     status["my_mana"] -= SPELLS_DICT[spell]["cost"]
     status["mana_spent"] += SPELLS_DICT[spell]["cost"]
 
@@ -87,21 +86,29 @@ def solve_pt1(my_hp, my_mana, enemy_hp, enemy_damage):
         "effects": (),
         "mana_spent": 0,
     }
-    statuses = [initial_status]
+    statuses = [(initial_status["mana_spent"], tuple(sorted(initial_status.items())))]
+    heapq.heapify(statuses)
     seen_statuses = set()
 
     while True:
-        statuses = sorted(statuses, key=lambda x: x["mana_spent"])
-        status = statuses.pop(0)
-
-        available_spells = sorted([sk for sk, sd in SPELLS_DICT.items() if sd["cost"] <= status["my_mana"]],
+        mana_spent, status = heapq.heappop(statuses)
+        status_dict = dict(status)
+        available_spells = sorted([sk for sk, sd in SPELLS_DICT.items() if sd["cost"] <= status_dict["my_mana"]
+                                  and sk not in [e for e, _ in status_dict["effects"]]],
                                   key=lambda x: SPELLS_DICT[x].get("cost", 0))
         for new_spell in available_spells:
-            new_status = apply_spell(status, new_spell)
+            if (status, new_spell) in seen_statuses:
+                continue
+
+            status_dict = dict(status)
+            new_status = apply_spell(status_dict, new_spell)
+            new_elem = (new_status["mana_spent"], tuple(sorted(new_status.items())))
+            seen_statuses.add((status, new_spell))
+
             if new_status["enemy_hp"] <= 0:
                 return new_status["mana_spent"]
-            elif new_status["my_hp"] > 0 and tuple(sorted(new_status.items())) not in seen_statuses:
-                statuses.append(new_status)
+            elif new_status["my_hp"] > 0 and new_elem not in statuses:
+                heapq.heappush(statuses, new_elem)
 
 
 # input
@@ -110,7 +117,7 @@ my_hp, my_mana, enemy_hp, enemy_damage, SPELLS_DICT = parse_input()
 # part 1
 min_mana = solve_pt1(my_hp, my_mana, enemy_hp, enemy_damage)
 
-# part 1
+# part 1 # 1482
 print("Part 1:", min_mana)
 
 
