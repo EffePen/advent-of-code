@@ -24,35 +24,24 @@ def parse_input():
     return my_hp, my_mana, enemy_hp, enemy_damage, spells_dict
 
 
-def apply_spell(status, spell):
+def apply_spell(status, spell, part):
+    # END of WIZARD turn
     status["my_mana"] -= SPELLS_DICT[spell]["cost"]
     status["mana_spent"] += SPELLS_DICT[spell]["cost"]
 
-    # cast spell
-    if spell == "Magic Missile":
-        status["enemy_hp"] -= 4
-    elif spell == "Drain":
-        status["enemy_hp"] -= 2
-        status["my_hp"] += 2
-    elif spell == "Shield":
-        status["effects"] += ((spell, 6),)
-    elif spell == "Poison":
-        status["effects"] += ((spell, 6),)
-    elif spell == "Recharge":
-        status["effects"] += ((spell, 5),)
+    if SPELLS_DICT[spell].get("turns"):
+        status["effects"] += ((spell, SPELLS_DICT[spell].get("turns")),)
     else:
-        raise ValueError
+        status["enemy_hp"] -= SPELLS_DICT[spell].get("damage", 0)
+        status["my_hp"] += SPELLS_DICT[spell].get("hp", 0)
 
-    # boss turn
+    # BOSS turn
     # apply effects
     my_armor = 0
     for effect, turns in status["effects"]:
-        if effect == "Shield":
-            my_armor += 7
-        elif effect == "Poison":
-            status["enemy_hp"] -= 3
-        elif effect == "Recharge":
-            status["my_mana"] += 101
+        my_armor += SPELLS_DICT[effect].get("armor", 0)
+        status["enemy_hp"] -= SPELLS_DICT[effect].get("damage", 0)
+        status["my_mana"] += SPELLS_DICT[effect].get("mana", 0)
     status["effects"] = tuple((e, et-1) for e, et in status["effects"] if et > 1)
 
     if status["enemy_hp"] <= 0:
@@ -62,22 +51,22 @@ def apply_spell(status, spell):
     if status["my_hp"] <= 0:
         return status
 
-    # beginning of my turn
+    # BEGINNING of WIZARD turn
+    if part == 2:
+        status["my_hp"] -= 1
+        if status["my_hp"] <= 0:
+            return status
+
     # apply effects
-    my_armor = 0
     for effect, turns in status["effects"]:
-        if effect == "Shield":
-            my_armor += 7
-        elif effect == "Poison":
-            status["enemy_hp"] -= 3
-        elif effect == "Recharge":
-            status["my_mana"] += 101
+        status["enemy_hp"] -= SPELLS_DICT[effect].get("damage", 0)
+        status["my_mana"] += SPELLS_DICT[effect].get("mana", 0)
     status["effects"] = tuple((e, et-1) for e, et in status["effects"] if et > 1)
 
     return status
 
 
-def solve_pt1(my_hp, my_mana, enemy_hp, enemy_damage):
+def solve(my_hp, my_mana, enemy_hp, enemy_damage, part):
     initial_status = {
         "my_hp": my_hp,
         "my_mana": my_mana,
@@ -86,6 +75,9 @@ def solve_pt1(my_hp, my_mana, enemy_hp, enemy_damage):
         "effects": (),
         "mana_spent": 0,
     }
+    if part == 2:
+        initial_status["my_hp"] -= 1
+
     statuses = [(initial_status["mana_spent"], tuple(sorted(initial_status.items())))]
     heapq.heapify(statuses)
     seen_statuses = set()
@@ -95,19 +87,19 @@ def solve_pt1(my_hp, my_mana, enemy_hp, enemy_damage):
         status_dict = dict(status)
         available_spells = sorted([sk for sk, sd in SPELLS_DICT.items() if sd["cost"] <= status_dict["my_mana"]
                                   and sk not in [e for e, _ in status_dict["effects"]]],
-                                  key=lambda x: SPELLS_DICT[x].get("cost", 0))
+                                  key=lambda x: SPELLS_DICT[x]["cost"])
         for new_spell in available_spells:
             if (status, new_spell) in seen_statuses:
                 continue
+            seen_statuses.add((status, new_spell))
 
             status_dict = dict(status)
-            new_status = apply_spell(status_dict, new_spell)
+            new_status = apply_spell(status_dict, new_spell, part)
             new_elem = (new_status["mana_spent"], tuple(sorted(new_status.items())))
-            seen_statuses.add((status, new_spell))
 
             if new_status["enemy_hp"] <= 0:
                 return new_status["mana_spent"]
-            elif new_status["my_hp"] > 0 and new_elem not in statuses:
+            elif new_status["my_hp"] > 0:
                 heapq.heappush(statuses, new_elem)
 
 
@@ -115,10 +107,12 @@ def solve_pt1(my_hp, my_mana, enemy_hp, enemy_damage):
 my_hp, my_mana, enemy_hp, enemy_damage, SPELLS_DICT = parse_input()
 
 # part 1
-min_mana = solve_pt1(my_hp, my_mana, enemy_hp, enemy_damage)
-
-# part 1 # 1482
+min_mana = solve(my_hp, my_mana, enemy_hp, enemy_damage, part=1)
 print("Part 1:", min_mana)
+
+# part 2
+min_mana = solve(my_hp, my_mana, enemy_hp, enemy_damage, part=2)
+print("Part 2:", min_mana)
 
 
 if __name__ == "__main__":
