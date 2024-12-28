@@ -10,7 +10,7 @@ def parse_input():
     return r_idx_str, c_idx_str
 
 
-def part1(r_idx, c_idx):
+def part1(r_idx, c_idx, modular_exponentation=True):
     # calculating the number of the code
     # tot_rows + 1 = r_idx + c_idx => tot_rows = r_idx + c_idx -1
     tot_rows = r_idx + c_idx - 1
@@ -19,8 +19,14 @@ def part1(r_idx, c_idx):
     num_codes = num_cells_last_full_triangle + num_cells_next_line
 
     code = 20151125
-    for _ in range(num_codes - 1):
-        code = (code * 252533) % 33554393
+    base = 252533
+    mod = 33554393
+    if modular_exponentation:
+        code = code * pow(base=base, exp=num_codes - 1, mod=mod) % mod
+    else:
+        for _ in range(num_codes - 1):
+            code = (code * base) % mod
+
     return code
 
 
