@@ -1,8 +1,5 @@
 
 
-from collections import Counter
-
-
 def parse_input():
     with open("input.txt") as f:
         input_txt = f.read().replace("R", "+").replace("L", "-")
